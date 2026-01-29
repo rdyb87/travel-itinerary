@@ -1,61 +1,66 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Travel Itinerary Planner</title>
-    
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
+
     <!-- Alpine.js -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    
+
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-    
+
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
-    
+    <link
+        href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap"
+        rel="stylesheet">
+
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
+
     <style>
         body {
             font-family: 'Poppins', sans-serif;
         }
-        
+
         .heading-font {
             font-family: 'Playfair Display', serif;
         }
-        
+
         .gradient-bg {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
-        
+
         .card-shadow {
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
         }
-        
+
         .hover-lift {
             transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
-        
+
         .hover-lift:hover {
             transform: translateY(-5px);
             box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
         }
-        
-        input:focus, textarea:focus, select:focus {
+
+        input:focus,
+        textarea:focus,
+        select:focus {
             outline: none;
             border-color: #667eea;
             box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
-        
+
         .timeline-item::before {
             content: '';
             position: absolute;
@@ -65,59 +70,143 @@
             width: 3px;
             background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
         }
-        
+
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
-        
+
         .fade-in {
             animation: fadeIn 0.5s ease-out;
         }
+
+        /* Mobile Optimizations */
+        @media (max-width: 640px) {
+
+            /* Header adjustments */
+            header .container {
+                padding: 1rem;
+            }
+
+            header h1 {
+                font-size: 1.5rem;
+            }
+
+            header i.fa-plane-departure {
+                font-size: 1.5rem;
+            }
+
+            /* Touch-friendly buttons */
+            button {
+                min-height: 44px;
+                min-width: 44px;
+            }
+
+            /* Modal optimizations */
+            .fixed>div {
+                margin: 0.5rem;
+                max-height: 95vh;
+            }
+
+            /* Form fields */
+            input,
+            textarea,
+            select {
+                font-size: 16px;
+                /* Prevents zoom on iOS */
+            }
+
+            /* Stats cards */
+            .stats-grid {
+                gap: 1rem;
+            }
+
+            /* Itinerary cards */
+            .itinerary-card {
+                padding: 1rem;
+            }
+
+            /* Hide text in small buttons, show icons only */
+            .btn-icon-only span {
+                display: none;
+            }
+        }
+
+        @media (max-width: 380px) {
+            header h1 {
+                font-size: 1.25rem;
+            }
+
+            .container {
+                padding-left: 0.75rem;
+                padding-right: 0.75rem;
+            }
+        }
     </style>
 </head>
+
 <body class="bg-gray-50" x-data="travelApp()">
-    
+
     <!-- Header -->
     <header class="gradient-bg text-white shadow-lg sticky top-0 z-50">
-        <div class="container mx-auto px-4 py-6">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center space-x-3">
-                    <i class="fas fa-plane-departure text-3xl"></i>
-                    <h1 class="text-3xl font-bold heading-font">TravelPlan</h1>
+        <div class="container mx-auto px-4 py-4 sm:py-6">
+            <div class="flex items-center justify-between flex-wrap gap-2">
+                <div class="flex items-center space-x-2 sm:space-x-3">
+                    <i class="fas fa-plane-departure text-2xl sm:text-3xl"></i>
+                    <h1 class="text-2xl sm:text-3xl font-bold heading-font">TravelPlan</h1>
                 </div>
-                <div class="flex items-center space-x-4">
-                    <button @click="showAddModal = true" class="bg-white text-purple-600 px-6 py-2 rounded-full font-semibold hover:bg-gray-100 transition duration-300 shadow-md flex items-center space-x-2">
-                        <i class="fas fa-plus"></i>
-                        <span class="hidden sm:inline">New Trip</span>
-                    </button>
-                    
-                    <!-- Firebase Sync Status -->
-                    <div class="flex items-center space-x-2 bg-white bg-opacity-20 px-4 py-2 rounded-full">
-                        <template x-if="firebaseConfigured && userId">
-                            <div class="flex items-center space-x-2">
+                <div class="flex items-center space-x-2 sm:space-x-4">
+                    <!-- Show different UI based on auth status -->
+                    <template x-if="!isAuthenticated">
+                        <button @click="showAuthModal = true"
+                            class="bg-white text-purple-600 px-4 sm:px-6 py-2 rounded-full font-semibold hover:bg-gray-100 transition duration-300 shadow-md">
+                            <i class="fas fa-sign-in-alt mr-1 sm:mr-2"></i>
+                            <span class="hidden xs:inline">Login</span>
+                        </button>
+                    </template>
+
+                    <template x-if="isAuthenticated">
+                        <div class="flex items-center space-x-2 sm:space-x-4">
+                            <button @click="showAddModal = true"
+                                class="bg-white text-purple-600 px-3 sm:px-6 py-2 rounded-full font-semibold hover:bg-gray-100 transition duration-300 shadow-md flex items-center space-x-1 sm:space-x-2 btn-icon-only">
+                                <i class="fas fa-plus"></i>
+                                <span>New Trip</span>
+                            </button>
+
+                            <!-- User Profile & Sync Status -->
+                            <div
+                                class="hidden sm:flex items-center space-x-2 bg-white bg-opacity-20 px-3 sm:px-4 py-2 rounded-full">
                                 <i class="fas fa-cloud-arrow-up text-green-300" x-show="syncStatus === 'synced'"></i>
                                 <i class="fas fa-sync fa-spin text-yellow-300" x-show="syncStatus === 'syncing'"></i>
-                                <span class="text-sm hidden sm:inline" x-text="syncStatus === 'synced' ? 'Synced' : 'Syncing...'"></span>
+                                <span class="text-sm" x-text="userEmail" x-show="userEmail"></span>
                             </div>
-                        </template>
-                        <template x-if="!firebaseConfigured">
-                            <div class="flex items-center space-x-2">
-                                <i class="fas fa-exclamation-triangle text-yellow-300"></i>
-                                <span class="text-sm hidden sm:inline">Setup Required</span>
-                            </div>
-                        </template>
-                    </div>
-                    
-                    <button @click="exportData" class="bg-white bg-opacity-20 hover:bg-opacity-30 px-4 py-2 rounded-full transition duration-300">
-                        <i class="fas fa-download"></i>
-                    </button>
-                    <button @click="importData" class="bg-white bg-opacity-20 hover:bg-opacity-30 px-4 py-2 rounded-full transition duration-300">
-                        <i class="fas fa-upload"></i>
-                    </button>
-                    <button @click="showSettingsModal = true" class="bg-white bg-opacity-20 hover:bg-opacity-30 px-4 py-2 rounded-full transition duration-300">
-                        <i class="fas fa-cog"></i>
-                    </button>
+
+                            <button @click="exportData"
+                                class="hidden sm:block bg-white bg-opacity-20 hover:bg-opacity-30 px-3 sm:px-4 py-2 rounded-full transition duration-300">
+                                <i class="fas fa-download"></i>
+                            </button>
+                            <button @click="importData"
+                                class="hidden sm:block bg-white bg-opacity-20 hover:bg-opacity-30 px-3 sm:px-4 py-2 rounded-full transition duration-300">
+                                <i class="fas fa-upload"></i>
+                            </button>
+                            <button @click="showSettingsModal = true"
+                                class="bg-white bg-opacity-20 hover:bg-opacity-30 px-3 sm:px-4 py-2 rounded-full transition duration-300">
+                                <i class="fas fa-cog"></i>
+                            </button>
+                            <button @click="logout"
+                                class="bg-red-500 bg-opacity-80 hover:bg-opacity-100 px-3 sm:px-4 py-2 rounded-full transition duration-300"
+                                title="Logout">
+                                <i class="fas fa-sign-out-alt"></i>
+                            </button>
+                        </div>
+                    </template>
                 </div>
             </div>
         </div>
@@ -125,7 +214,7 @@
 
     <!-- Main Content -->
     <main class="container mx-auto px-4 py-8">
-        
+
         <!-- Stats Cards -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <div class="bg-white rounded-xl p-6 card-shadow hover-lift">
@@ -139,7 +228,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <div class="bg-white rounded-xl p-6 card-shadow hover-lift">
                 <div class="flex items-center justify-between">
                     <div>
@@ -151,7 +240,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <div class="bg-white rounded-xl p-6 card-shadow hover-lift">
                 <div class="flex items-center justify-between">
                     <div>
@@ -169,7 +258,8 @@
         <div class="bg-white rounded-xl p-4 mb-6 card-shadow">
             <div class="flex flex-col sm:flex-row gap-4 items-center">
                 <div class="flex-1 w-full">
-                    <input type="text" x-model="searchQuery" placeholder="Search destinations..." class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                    <input type="text" x-model="searchQuery" placeholder="Search destinations..."
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg">
                 </div>
                 <select x-model="filterStatus" class="px-4 py-2 border border-gray-300 rounded-lg">
                     <option value="all">All Trips</option>
@@ -191,39 +281,51 @@
                                 <p class="text-purple-100" x-text="itinerary.country"></p>
                             </div>
                             <div class="flex space-x-2">
-                                <button @click="editItinerary(itinerary)" class="bg-white bg-opacity-20 hover:bg-opacity-30 p-2 rounded-full transition">
+                                <button @click="editItinerary(itinerary)"
+                                    class="bg-white bg-opacity-20 hover:bg-opacity-30 p-2 rounded-full transition">
                                     <i class="fas fa-edit"></i>
                                 </button>
-                                <button @click="deleteItinerary(itinerary.id)" class="bg-white bg-opacity-20 hover:bg-opacity-30 p-2 rounded-full transition">
+                                <button @click="deleteItinerary(itinerary.id)"
+                                    class="bg-white bg-opacity-20 hover:bg-opacity-30 p-2 rounded-full transition">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </div>
                         </div>
                         <div class="flex items-center space-x-4 text-sm">
-                            <span><i class="fas fa-calendar mr-2"></i><span x-text="formatMalaysianDate(itinerary.startDate)"></span> - <span x-text="formatMalaysianDate(itinerary.endDate)"></span></span>
+                            <span><i class="fas fa-calendar mr-2"></i><span
+                                    x-text="formatMalaysianDate(itinerary.startDate)"></span> - <span
+                                    x-text="formatMalaysianDate(itinerary.endDate)"></span></span>
                         </div>
                     </div>
-                    
+
                     <!-- Trip Details -->
                     <div class="p-6">
                         <!-- Hotel Information -->
                         <div class="mb-6">
                             <h4 class="font-semibold text-gray-700 mb-3 flex items-center">
                                 <i class="fas fa-hotel text-purple-600 mr-2"></i>
-                                Accommodation <span class="text-sm text-gray-500 ml-2" x-show="itinerary.hotels && itinerary.hotels.length > 1">(<span x-text="itinerary.hotels.length"></span> hotels)</span>
+                                Accommodation <span class="text-sm text-gray-500 ml-2"
+                                    x-show="itinerary.hotels && itinerary.hotels.length > 1">(<span
+                                        x-text="itinerary.hotels.length"></span> hotels)</span>
                             </h4>
                             <div class="space-y-3">
                                 <template x-for="(hotel, index) in itinerary.hotels || [itinerary.hotel]" :key="index">
                                     <div class="bg-gray-50 rounded-lg p-4 border-l-4 border-purple-400">
-                                        <div class="flex items-start justify-between mb-2" x-show="itinerary.hotels && itinerary.hotels.length > 1">
-                                            <span class="text-xs font-semibold text-purple-600 bg-purple-100 px-2 py-1 rounded">Hotel <span x-text="index + 1"></span></span>
+                                        <div class="flex items-start justify-between mb-2"
+                                            x-show="itinerary.hotels && itinerary.hotels.length > 1">
+                                            <span
+                                                class="text-xs font-semibold text-purple-600 bg-purple-100 px-2 py-1 rounded">Hotel
+                                                <span x-text="index + 1"></span></span>
                                         </div>
                                         <p class="font-medium text-gray-800" x-text="hotel.name"></p>
-                                        <p class="text-sm text-gray-600 mt-1" x-text="hotel.address" x-show="hotel.address"></p>
+                                        <p class="text-sm text-gray-600 mt-1" x-text="hotel.address"
+                                            x-show="hotel.address"></p>
                                         <div class="flex flex-col sm:flex-row sm:items-center mt-2 text-sm gap-1">
-                                            <span class="text-gray-600">Check-in: <span class="font-medium" x-text="formatMalaysianDateTime(hotel.checkIn)"></span></span>
+                                            <span class="text-gray-600">Check-in: <span class="font-medium"
+                                                    x-text="formatMalaysianDateTime(hotel.checkIn)"></span></span>
                                             <span class="mx-2 hidden sm:inline">•</span>
-                                            <span class="text-gray-600">Check-out: <span class="font-medium" x-text="formatMalaysianDateTime(hotel.checkOut)"></span></span>
+                                            <span class="text-gray-600">Check-out: <span class="font-medium"
+                                                    x-text="formatMalaysianDateTime(hotel.checkOut)"></span></span>
                                         </div>
                                         <template x-if="hotel.phone">
                                             <p class="text-sm text-gray-600 mt-2">
@@ -245,15 +347,18 @@
                                 </h4>
                                 <div class="bg-gray-50 rounded-lg p-4">
                                     <p class="font-medium text-gray-800" x-text="itinerary.flight.airline"></p>
-                                    <p class="text-sm text-gray-600 mt-1">Flight: <span class="font-medium" x-text="itinerary.flight.flightNumber"></span></p>
+                                    <p class="text-sm text-gray-600 mt-1">Flight: <span class="font-medium"
+                                            x-text="itinerary.flight.flightNumber"></span></p>
                                     <div class="grid grid-cols-2 gap-4 mt-3">
                                         <div>
                                             <p class="text-xs text-gray-500">Departure</p>
-                                            <p class="text-sm font-medium" x-text="formatMalaysianDateTime(itinerary.flight.departure)"></p>
+                                            <p class="text-sm font-medium"
+                                                x-text="formatMalaysianDateTime(itinerary.flight.departure)"></p>
                                         </div>
                                         <div>
                                             <p class="text-xs text-gray-500">Arrival</p>
-                                            <p class="text-sm font-medium" x-text="formatMalaysianDateTime(itinerary.flight.arrival)"></p>
+                                            <p class="text-sm font-medium"
+                                                x-text="formatMalaysianDateTime(itinerary.flight.arrival)"></p>
                                         </div>
                                     </div>
                                 </div>
@@ -285,7 +390,8 @@
                                     <i class="fas fa-sticky-note text-purple-600 mr-2"></i>
                                     Notes
                                 </h4>
-                                <p class="text-gray-600 text-sm bg-yellow-50 rounded-lg p-4 border-l-4 border-yellow-400" x-text="itinerary.notes"></p>
+                                <p class="text-gray-600 text-sm bg-yellow-50 rounded-lg p-4 border-l-4 border-yellow-400"
+                                    x-text="itinerary.notes"></p>
                             </div>
                         </template>
 
@@ -294,7 +400,8 @@
                             <div class="mt-4 pt-4 border-t border-gray-200">
                                 <div class="flex justify-between items-center">
                                     <span class="text-gray-600 font-medium">Estimated Budget</span>
-                                    <span class="text-2xl font-bold text-purple-600" x-text="'RM ' + parseFloat(itinerary.budget).toLocaleString('ms-MY', {minimumFractionDigits: 2, maximumFractionDigits: 2})"></span>
+                                    <span class="text-2xl font-bold text-purple-600"
+                                        x-text="'RM ' + parseFloat(itinerary.budget).toLocaleString('ms-MY', {minimumFractionDigits: 2, maximumFractionDigits: 2})"></span>
                                 </div>
                             </div>
                         </template>
@@ -309,7 +416,8 @@
                 <i class="fas fa-map-marked-alt text-gray-300 text-6xl mb-4"></i>
                 <h3 class="text-2xl font-semibold text-gray-600 mb-2">No itineraries found</h3>
                 <p class="text-gray-500 mb-6">Start planning your next adventure!</p>
-                <button @click="showAddModal = true" class="gradient-bg text-white px-8 py-3 rounded-full font-semibold hover:shadow-lg transition duration-300">
+                <button @click="showAddModal = true"
+                    class="gradient-bg text-white px-8 py-3 rounded-full font-semibold hover:shadow-lg transition duration-300">
                     <i class="fas fa-plus mr-2"></i>Create Your First Trip
                 </button>
             </div>
@@ -317,37 +425,113 @@
 
     </main>
 
+    <!-- Login/Signup Modal -->
+    <div x-show="showAuthModal" x-cloak
+        class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+        @click.self="showAuthModal = false">
+        <div class="bg-white rounded-2xl max-w-md w-full" @click.stop>
+            <div class="gradient-bg text-white p-6 rounded-t-2xl">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-2xl font-bold heading-font"
+                        x-text="authMode === 'login' ? 'Welcome Back' : 'Create Account'"></h2>
+                    <button @click="showAuthModal = false"
+                        class="text-white hover:bg-white hover:bg-opacity-20 p-2 rounded-full transition">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="p-6">
+                <!-- Error Message -->
+                <div x-show="authError" class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <p class="text-red-800 text-sm" x-text="authError"></p>
+                </div>
+
+                <!-- Login Form -->
+                <form @submit.prevent="authMode === 'login' ? login() : signup()" class="space-y-4">
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2">Email *</label>
+                        <input type="email" x-model="authEmail" required
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                            placeholder="your@email.com">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2">Password *</label>
+                        <input type="password" x-model="authPassword" required minlength="6"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                            placeholder="At least 6 characters">
+                    </div>
+
+                    <button type="submit"
+                        class="w-full gradient-bg text-white px-6 py-3 rounded-lg hover:shadow-lg transition font-semibold">
+                        <i class="fas" :class="authMode === 'login' ? 'fa-sign-in-alt' : 'fa-user-plus'"></i>
+                        <span x-text="authMode === 'login' ? 'Login' : 'Sign Up'"></span>
+                    </button>
+                </form>
+
+                <!-- Toggle Mode -->
+                <div class="mt-6 text-center">
+                    <button @click="toggleAuthMode" class="text-purple-600 hover:text-purple-800 font-medium">
+                        <span x-show="authMode === 'login'">Don't have an account? Sign Up</span>
+                        <span x-show="authMode === 'signup'">Already have an account? Login</span>
+                    </button>
+                </div>
+
+                <!-- Firebase Setup Note -->
+                <div x-show="!firebaseConfigured" class="mt-6 p-4 bg-blue-50 border-l-4 border-blue-500">
+                    <div class="flex items-start">
+                        <i class="fas fa-info-circle text-blue-500 mt-1 mr-3"></i>
+                        <div class="text-sm text-blue-800">
+                            <p class="font-semibold mb-1">Firebase Setup Required</p>
+                            <p>Please configure Firebase settings first to enable cloud sync.</p>
+                            <button @click="showAuthModal = false; showSettingsModal = true"
+                                class="mt-2 text-blue-600 hover:text-blue-800 underline font-medium">
+                                Configure Now →
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Add/Edit Modal -->
-    <div x-show="showAddModal" x-cloak class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" @click.self="closeModal">
+    <div x-show="showAddModal" x-cloak
+        class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" @click.self="closeModal">
         <div class="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto" @click.stop>
             <div class="gradient-bg text-white p-6 sticky top-0 z-10">
                 <div class="flex justify-between items-center">
                     <h2 class="text-2xl font-bold heading-font" x-text="editMode ? 'Edit Trip' : 'Plan New Trip'"></h2>
-                    <button @click="closeModal" class="text-white hover:bg-white hover:bg-opacity-20 p-2 rounded-full transition">
+                    <button @click="closeModal"
+                        class="text-white hover:bg-white hover:bg-opacity-20 p-2 rounded-full transition">
                         <i class="fas fa-times text-xl"></i>
                     </button>
                 </div>
             </div>
 
             <form @submit.prevent="saveItinerary" class="p-6 space-y-6">
-                
+
                 <!-- Basic Information -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <label class="block text-gray-700 font-medium mb-2">Destination *</label>
-                        <input type="text" x-model="currentItinerary.destination" required class="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="e.g., Paris">
+                        <input type="text" x-model="currentItinerary.destination" required
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="e.g., Paris">
                     </div>
                     <div>
                         <label class="block text-gray-700 font-medium mb-2">Country *</label>
-                        <input type="text" x-model="currentItinerary.country" required class="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="e.g., France">
+                        <input type="text" x-model="currentItinerary.country" required
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="e.g., France">
                     </div>
                     <div>
                         <label class="block text-gray-700 font-medium mb-2">Start Date *</label>
-                        <input type="date" x-model="currentItinerary.startDate" required class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                        <input type="date" x-model="currentItinerary.startDate" required
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg">
                     </div>
                     <div>
                         <label class="block text-gray-700 font-medium mb-2">End Date *</label>
-                        <input type="date" x-model="currentItinerary.endDate" required class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                        <input type="date" x-model="currentItinerary.endDate" required
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg">
                     </div>
                 </div>
 
@@ -358,63 +542,60 @@
                             <i class="fas fa-hotel text-purple-600 mr-2"></i>
                             Hotel Information
                         </span>
-                        <button type="button" @click="addHotel" class="bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600 transition font-medium text-sm">
+                        <button type="button" @click="addHotel"
+                            class="bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600 transition font-medium text-sm">
                             <i class="fas fa-plus mr-1"></i>Add Hotel
                         </button>
                     </h3>
-                    
+
                     <div class="space-y-6">
                         <template x-for="(hotel, hotelIndex) in currentItinerary.hotels" :key="hotelIndex">
                             <div class="bg-white p-4 rounded-lg border-2 border-purple-200 relative">
                                 <!-- Hotel Number Badge -->
                                 <div class="flex items-center justify-between mb-4">
-                                    <span class="text-sm font-semibold text-purple-600 bg-purple-100 px-3 py-1 rounded-full">
+                                    <span
+                                        class="text-sm font-semibold text-purple-600 bg-purple-100 px-3 py-1 rounded-full">
                                         Hotel <span x-text="hotelIndex + 1"></span>
                                     </span>
-                                    <button type="button" 
-                                            @click="removeHotel(hotelIndex)" 
-                                            x-show="currentItinerary.hotels.length > 1"
-                                            class="bg-red-500 text-white px-3 py-1 rounded-lg hover:bg-red-600 transition text-sm">
+                                    <button type="button" @click="removeHotel(hotelIndex)"
+                                        x-show="currentItinerary.hotels.length > 1"
+                                        class="bg-red-500 text-white px-3 py-1 rounded-lg hover:bg-red-600 transition text-sm">
                                         <i class="fas fa-trash mr-1"></i>Remove
                                     </button>
                                 </div>
-                                
+
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div class="md:col-span-2">
                                         <label class="block text-gray-700 font-medium mb-2">Hotel Name *</label>
-                                        <input type="text" 
-                                               x-model="currentItinerary.hotels[hotelIndex].name" 
-                                               required 
-                                               class="w-full px-4 py-2 border border-gray-300 rounded-lg" 
-                                               placeholder="e.g., Grand Hotel">
+                                        <input type="text" x-model="currentItinerary.hotels[hotelIndex].name" required
+                                            class="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                                            placeholder="e.g., Grand Hotel">
                                     </div>
                                     <div class="md:col-span-2">
                                         <label class="block text-gray-700 font-medium mb-2">Address</label>
-                                        <input type="text" 
-                                               x-model="currentItinerary.hotels[hotelIndex].address" 
-                                               class="w-full px-4 py-2 border border-gray-300 rounded-lg" 
-                                               placeholder="Full hotel address">
+                                        <input type="text" x-model="currentItinerary.hotels[hotelIndex].address"
+                                            class="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                                            placeholder="Full hotel address">
                                     </div>
                                     <div>
-                                        <label class="block text-gray-700 font-medium mb-2">Check-in Date & Time *</label>
-                                        <input type="datetime-local" 
-                                               x-model="currentItinerary.hotels[hotelIndex].checkIn" 
-                                               required 
-                                               class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                                        <label class="block text-gray-700 font-medium mb-2">Check-in Date & Time
+                                            *</label>
+                                        <input type="datetime-local"
+                                            x-model="currentItinerary.hotels[hotelIndex].checkIn" required
+                                            class="w-full px-4 py-2 border border-gray-300 rounded-lg">
                                     </div>
                                     <div>
-                                        <label class="block text-gray-700 font-medium mb-2">Check-out Date & Time *</label>
-                                        <input type="datetime-local" 
-                                               x-model="currentItinerary.hotels[hotelIndex].checkOut" 
-                                               required 
-                                               class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                                        <label class="block text-gray-700 font-medium mb-2">Check-out Date & Time
+                                            *</label>
+                                        <input type="datetime-local"
+                                            x-model="currentItinerary.hotels[hotelIndex].checkOut" required
+                                            class="w-full px-4 py-2 border border-gray-300 rounded-lg">
                                     </div>
                                     <div class="md:col-span-2">
                                         <label class="block text-gray-700 font-medium mb-2">Phone Number</label>
-                                        <input type="tel" 
-                                               x-model="currentItinerary.hotels[hotelIndex].phone" 
-                                               class="w-full px-4 py-2 border border-gray-300 rounded-lg" 
-                                               placeholder="+1 234 567 8900">
+                                        <input type="tel" x-model="currentItinerary.hotels[hotelIndex].phone"
+                                            class="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                                            placeholder="+1 234 567 8900">
                                     </div>
                                 </div>
                             </div>
@@ -431,19 +612,23 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-gray-700 font-medium mb-2">Airline</label>
-                            <input type="text" x-model="currentItinerary.flight.airline" class="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="e.g., Emirates">
+                            <input type="text" x-model="currentItinerary.flight.airline"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="e.g., Emirates">
                         </div>
                         <div>
                             <label class="block text-gray-700 font-medium mb-2">Flight Number</label>
-                            <input type="text" x-model="currentItinerary.flight.flightNumber" class="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="e.g., EK205">
+                            <input type="text" x-model="currentItinerary.flight.flightNumber"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="e.g., EK205">
                         </div>
                         <div>
                             <label class="block text-gray-700 font-medium mb-2">Departure Time</label>
-                            <input type="datetime-local" x-model="currentItinerary.flight.departure" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                            <input type="datetime-local" x-model="currentItinerary.flight.departure"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg">
                         </div>
                         <div>
                             <label class="block text-gray-700 font-medium mb-2">Arrival Time</label>
-                            <input type="datetime-local" x-model="currentItinerary.flight.arrival" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                            <input type="datetime-local" x-model="currentItinerary.flight.arrival"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg">
                         </div>
                     </div>
                 </div>
@@ -457,13 +642,17 @@
                     <div class="space-y-3">
                         <template x-for="(activity, index) in currentItinerary.activities" :key="index">
                             <div class="flex gap-2">
-                                <input type="text" x-model="currentItinerary.activities[index]" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg" placeholder="Add an activity">
-                                <button type="button" @click="removeActivity(index)" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition">
+                                <input type="text" x-model="currentItinerary.activities[index]"
+                                    class="flex-1 px-4 py-2 border border-gray-300 rounded-lg"
+                                    placeholder="Add an activity">
+                                <button type="button" @click="removeActivity(index)"
+                                    class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </div>
                         </template>
-                        <button type="button" @click="addActivity" class="w-full bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition font-medium">
+                        <button type="button" @click="addActivity"
+                            class="w-full bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition font-medium">
                             <i class="fas fa-plus mr-2"></i>Add Activity
                         </button>
                     </div>
@@ -473,21 +662,26 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <label class="block text-gray-700 font-medium mb-2">Estimated Budget (MYR/RM)</label>
-                        <input type="number" step="0.01" x-model="currentItinerary.budget" class="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="e.g., 5000.00">
+                        <input type="number" step="0.01" x-model="currentItinerary.budget"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="e.g., 5000.00">
                     </div>
                 </div>
 
                 <div>
                     <label class="block text-gray-700 font-medium mb-2">Notes</label>
-                    <textarea x-model="currentItinerary.notes" rows="4" class="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="Add any additional notes or reminders..."></textarea>
+                    <textarea x-model="currentItinerary.notes" rows="4"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                        placeholder="Add any additional notes or reminders..."></textarea>
                 </div>
 
                 <!-- Form Actions -->
                 <div class="flex justify-end space-x-4 pt-4 border-t">
-                    <button type="button" @click="closeModal" class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium">
+                    <button type="button" @click="closeModal"
+                        class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium">
                         Cancel
                     </button>
-                    <button type="submit" class="gradient-bg text-white px-8 py-2 rounded-lg hover:shadow-lg transition font-medium">
+                    <button type="submit"
+                        class="gradient-bg text-white px-8 py-2 rounded-lg hover:shadow-lg transition font-medium">
                         <i class="fas fa-save mr-2"></i>
                         <span x-text="editMode ? 'Update Trip' : 'Save Trip'"></span>
                     </button>
@@ -501,12 +695,15 @@
     <input type="file" id="importFile" accept=".json" style="display: none;" @change="handleImport">
 
     <!-- Firebase Settings Modal -->
-    <div x-show="showSettingsModal" x-cloak class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" @click.self="showSettingsModal = false">
+    <div x-show="showSettingsModal" x-cloak
+        class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+        @click.self="showSettingsModal = false">
         <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" @click.stop>
             <div class="gradient-bg text-white p-6 sticky top-0 z-10">
                 <div class="flex justify-between items-center">
                     <h2 class="text-2xl font-bold heading-font">Firebase Configuration</h2>
-                    <button @click="showSettingsModal = false" class="text-white hover:bg-white hover:bg-opacity-20 p-2 rounded-full transition">
+                    <button @click="showSettingsModal = false"
+                        class="text-white hover:bg-white hover:bg-opacity-20 p-2 rounded-full transition">
                         <i class="fas fa-times text-xl"></i>
                     </button>
                 </div>
@@ -519,13 +716,16 @@
                         <div class="text-sm text-blue-800">
                             <p class="font-semibold mb-2">Setup Instructions:</p>
                             <ol class="list-decimal ml-4 space-y-1">
-                                <li>Go to <a href="https://console.firebase.google.com" target="_blank" class="underline">Firebase Console</a></li>
+                                <li>Go to <a href="https://console.firebase.google.com" target="_blank"
+                                        class="underline">Firebase Console</a></li>
                                 <li>Create a new project (or use existing)</li>
+                                <li>Go to Authentication → Sign-in method → Enable Email/Password</li>
                                 <li>Go to Project Settings → General → Your apps</li>
                                 <li>Click "Web" (</>) to add a web app</li>
                                 <li>Copy the config values and paste below</li>
                                 <li>In Firestore Database, create a database in production mode</li>
-                                <li>Set Rules: <code class="bg-blue-100 px-1">allow read, write: if request.auth != null;</code></li>
+                                <li>Set Rules: <code
+                                        class="bg-blue-100 px-1">allow read, write: if request.auth != null;</code></li>
                             </ol>
                         </div>
                     </div>
@@ -534,45 +734,61 @@
                 <form @submit.prevent="saveFirebaseConfig" class="space-y-4">
                     <div>
                         <label class="block text-gray-700 font-medium mb-2">API Key</label>
-                        <input type="text" x-model="firebaseConfig.apiKey" required class="w-full px-4 py-2 border border-gray-300 rounded-lg font-mono text-sm" placeholder="AIzaSy...">
+                        <input type="text" x-model="firebaseConfig.apiKey" required
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg font-mono text-sm"
+                            placeholder="AIzaSy...">
                     </div>
                     <div>
                         <label class="block text-gray-700 font-medium mb-2">Auth Domain</label>
-                        <input type="text" x-model="firebaseConfig.authDomain" required class="w-full px-4 py-2 border border-gray-300 rounded-lg font-mono text-sm" placeholder="your-project.firebaseapp.com">
+                        <input type="text" x-model="firebaseConfig.authDomain" required
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg font-mono text-sm"
+                            placeholder="your-project.firebaseapp.com">
                     </div>
                     <div>
                         <label class="block text-gray-700 font-medium mb-2">Project ID</label>
-                        <input type="text" x-model="firebaseConfig.projectId" required class="w-full px-4 py-2 border border-gray-300 rounded-lg font-mono text-sm" placeholder="your-project-id">
+                        <input type="text" x-model="firebaseConfig.projectId" required
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg font-mono text-sm"
+                            placeholder="your-project-id">
                     </div>
                     <div>
                         <label class="block text-gray-700 font-medium mb-2">Storage Bucket</label>
-                        <input type="text" x-model="firebaseConfig.storageBucket" class="w-full px-4 py-2 border border-gray-300 rounded-lg font-mono text-sm" placeholder="your-project.appspot.com">
+                        <input type="text" x-model="firebaseConfig.storageBucket"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg font-mono text-sm"
+                            placeholder="your-project.appspot.com">
                     </div>
                     <div>
                         <label class="block text-gray-700 font-medium mb-2">Messaging Sender ID</label>
-                        <input type="text" x-model="firebaseConfig.messagingSenderId" class="w-full px-4 py-2 border border-gray-300 rounded-lg font-mono text-sm" placeholder="1234567890">
+                        <input type="text" x-model="firebaseConfig.messagingSenderId"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg font-mono text-sm"
+                            placeholder="1234567890">
                     </div>
                     <div>
                         <label class="block text-gray-700 font-medium mb-2">App ID</label>
-                        <input type="text" x-model="firebaseConfig.appId" required class="w-full px-4 py-2 border border-gray-300 rounded-lg font-mono text-sm" placeholder="1:1234567890:web:...">
+                        <input type="text" x-model="firebaseConfig.appId" required
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg font-mono text-sm"
+                            placeholder="1:1234567890:web:...">
                     </div>
 
                     <div class="flex justify-between items-center pt-4 border-t">
-                        <button type="button" @click="clearFirebaseConfig" class="text-red-600 hover:text-red-800 font-medium">
+                        <button type="button" @click="clearFirebaseConfig"
+                            class="text-red-600 hover:text-red-800 font-medium">
                             <i class="fas fa-trash mr-2"></i>Clear Configuration
                         </button>
                         <div class="flex space-x-3">
-                            <button type="button" @click="showSettingsModal = false" class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium">
+                            <button type="button" @click="showSettingsModal = false"
+                                class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium">
                                 Cancel
                             </button>
-                            <button type="submit" class="gradient-bg text-white px-8 py-2 rounded-lg hover:shadow-lg transition font-medium">
+                            <button type="submit"
+                                class="gradient-bg text-white px-8 py-2 rounded-lg hover:shadow-lg transition font-medium">
                                 <i class="fas fa-save mr-2"></i>Save & Connect
                             </button>
                         </div>
                     </div>
                 </form>
 
-                <div x-show="firebaseConfigured && userId" class="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                <div x-show="firebaseConfigured && userId"
+                    class="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
                     <p class="text-green-800 font-medium">
                         <i class="fas fa-check-circle mr-2"></i>
                         Connected successfully! Your data is syncing across devices.
@@ -591,11 +807,20 @@
                 itineraries: [],
                 showAddModal: false,
                 showSettingsModal: false,
+                showAuthModal: false,
                 editMode: false,
                 searchQuery: '',
                 filterStatus: 'all',
                 syncStatus: 'synced', // 'synced', 'syncing'
-                
+
+                // Authentication
+                isAuthenticated: false,
+                authMode: 'login', // 'login' or 'signup'
+                authEmail: '',
+                authPassword: '',
+                authError: '',
+                userEmail: '',
+
                 // Firebase
                 db: null,
                 auth: null,
@@ -609,7 +834,7 @@
                     messagingSenderId: '',
                     appId: ''
                 },
-                
+
                 currentItinerary: {
                     id: Date.now(),
                     destination: '',
@@ -708,7 +933,7 @@
                     if (confirm('Are you sure you want to delete this trip?')) {
                         this.itineraries = this.itineraries.filter(i => i.id !== id);
                         this.saveToLocalStorage();
-                        
+
                         // Delete from Firebase
                         if (this.firebaseConfigured) {
                             this.deleteFromFirebase(id);
@@ -735,7 +960,7 @@
                     if (confirm('This will remove Firebase sync. Your local data will remain. Continue?')) {
                         localStorage.removeItem('firebaseConfig');
                         this.firebaseConfig = {
-                            apiKey: '', authDomain: '', projectId: '', 
+                            apiKey: '', authDomain: '', projectId: '',
                             storageBucket: '', messagingSenderId: '', appId: ''
                         };
                         this.firebaseConfigured = false;
@@ -758,20 +983,25 @@
                         firebase.initializeApp(this.firebaseConfig);
                         this.db = firebase.firestore();
                         this.auth = firebase.auth();
+                        this.firebaseConfigured = true;
 
-                        // Sign in anonymously
-                        await this.auth.signInAnonymously();
-                        
+                        // Setup auth state listener
+
                         this.auth.onAuthStateChanged(async (user) => {
                             if (user) {
                                 this.userId = user.uid;
                                 this.firebaseConfigured = true;
-                                
+
                                 // Load data from Firebase
                                 await this.loadFromFirebase();
-                                
+
                                 // Setup real-time listener
                                 this.setupFirebaseListener();
+                            }
+                            } else {
+                                this.userId = null;
+                                this.userEmail = \'\';
+                                this.isAuthenticated = false;
                             }
                         });
 
@@ -784,25 +1014,25 @@
 
                 async loadFromFirebase() {
                     if (!this.db || !this.userId) return;
-                    
+
                     try {
                         this.syncStatus = 'syncing';
                         const snapshot = await this.db.collection('users')
                             .doc(this.userId)
                             .collection('itineraries')
                             .get();
-                        
+
                         const firebaseData = [];
                         snapshot.forEach(doc => {
                             firebaseData.push({ id: doc.id, ...doc.data() });
                         });
-                        
+
                         if (firebaseData.length > 0) {
                             this.itineraries = firebaseData;
                             // Also save to localStorage as backup
                             localStorage.setItem('travelItineraries', JSON.stringify(this.itineraries));
                         }
-                        
+
                         this.syncStatus = 'synced';
                     } catch (error) {
                         console.error('Error loading from Firebase:', error);
@@ -812,7 +1042,7 @@
 
                 setupFirebaseListener() {
                     if (!this.db || !this.userId) return;
-                    
+
                     this.db.collection('users')
                         .doc(this.userId)
                         .collection('itineraries')
@@ -821,7 +1051,7 @@
                             snapshot.forEach(doc => {
                                 updates.push({ id: doc.id, ...doc.data() });
                             });
-                            
+
                             if (updates.length > 0) {
                                 this.itineraries = updates;
                                 localStorage.setItem('travelItineraries', JSON.stringify(this.itineraries));
@@ -831,7 +1061,7 @@
 
                 async saveToFirebase(itinerary) {
                     if (!this.db || !this.userId) return;
-                    
+
                     try {
                         this.syncStatus = 'syncing';
                         await this.db.collection('users')
@@ -848,7 +1078,7 @@
 
                 async deleteFromFirebase(id) {
                     if (!this.db || !this.userId) return;
-                    
+
                     try {
                         this.syncStatus = 'syncing';
                         await this.db.collection('users')
@@ -866,7 +1096,7 @@
                 async saveToStorage() {
                     // Save to localStorage
                     this.saveToLocalStorage();
-                    
+
                     // Save to Firebase if configured
                     if (this.firebaseConfigured && this.db && this.userId) {
                         for (const itinerary of this.itineraries) {
@@ -908,7 +1138,7 @@
                 formatMalaysianDateTime(datetime) {
                     if (!datetime) return '';
                     const date = new Date(datetime);
-                    return date.toLocaleString('ms-MY', { 
+                    return date.toLocaleString('ms-MY', {
                         timeZone: 'Asia/Kuala_Lumpur',
                         year: 'numeric',
                         month: 'short',
@@ -922,7 +1152,7 @@
                 formatMalaysianDate(dateStr) {
                     if (!dateStr) return '';
                     const date = new Date(dateStr);
-                    return date.toLocaleDateString('ms-MY', { 
+                    return date.toLocaleDateString('ms-MY', {
                         timeZone: 'Asia/Kuala_Lumpur',
                         year: 'numeric',
                         month: 'long',
@@ -980,7 +1210,7 @@
                     let filtered = this.itineraries;
 
                     if (this.searchQuery) {
-                        filtered = filtered.filter(i => 
+                        filtered = filtered.filter(i =>
                             i.destination.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
                             i.country.toLowerCase().includes(this.searchQuery.toLowerCase())
                         );
@@ -1001,10 +1231,88 @@
 
                 get uniqueCountries() {
                     return new Set(this.itineraries.map(i => i.country)).size;
+                },
+
+                // Authentication Methods
+                async login() {
+                    if (!this.firebaseConfigured || !this.auth) {
+                        this.authError = 'Please configure Firebase first';
+                        return;
+                    }
+
+                    try {
+                        this.authError = '';
+                        await this.auth.signInWithEmailAndPassword(this.authEmail, this.authPassword);
+                        this.showAuthModal = false;
+                        this.authEmail = '';
+                        this.authPassword = '';
+                    } catch (error) {
+                        console.error('Login error:', error);
+                        switch (error.code) {
+                            case 'auth/user-not-found':
+                            case 'auth/wrong-password':
+                                this.authError = 'Invalid email or password';
+                                break;
+                            case 'auth/invalid-email':
+                                this.authError = 'Invalid email address';
+                                break;
+                            default:
+                                this.authError = error.message;
+                        }
+                    }
+                },
+
+                async signup() {
+                    if (!this.firebaseConfigured || !this.auth) {
+                        this.authError = 'Please configure Firebase first';
+                        return;
+                    }
+
+                    try {
+                        this.authError = '';
+                        await this.auth.createUserWithEmailAndPassword(this.authEmail, this.authPassword);
+                        this.showAuthModal = false;
+                        this.authEmail = '';
+                        this.authPassword = '';
+                    } catch (error) {
+                        console.error('Signup error:', error);
+                        switch (error.code) {
+                            case 'auth/email-already-in-use':
+                                this.authError = 'Email already in use';
+                                break;
+                            case 'auth/invalid-email':
+                                this.authError = 'Invalid email address';
+                                break;
+                            case 'auth/weak-password':
+                                this.authError = 'Password should be at least 6 characters';
+                                break;
+                            default:
+                                this.authError = error.message;
+                        }
+                    }
+                },
+
+                async logout() {
+                    if (confirm('Are you sure you want to logout?')) {
+                        try {
+                            await this.auth.signOut();
+                        } catch (error) {
+                            console.error('Logout error:', error);
+                            alert('Logout failed: ' + error.message);
+                        }
+                    }
+                },
+
+                toggleAuthMode() {
+                    this.authMode = this.authMode === 'login' ? 'signup' : 'login';
+                    this.authError = '';
+                    this.authEmail = '';
+                    this.authPassword = '';
                 }
             };
         }
     </script>
 
 </body>
+
 </html>
