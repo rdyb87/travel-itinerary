@@ -28,6 +28,10 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
+        [x-cloak] {
+            display: none !important;
+        }
+
         body {
             font-family: 'Poppins', sans-serif;
         }
@@ -721,7 +725,7 @@
                                 <li>Create a new project (or use existing)</li>
                                 <li>Go to Authentication → Sign-in method → Enable Email/Password</li>
                                 <li>Go to Project Settings → General → Your apps</li>
-                                <li>Click "Web" (</>) to add a web app</li>
+                                <li>Click "Web" (&lt;/&gt;) to add a web app</li>
                                 <li>Copy the config values and paste below</li>
                                 <li>In Firestore Database, create a database in production mode</li>
                                 <li>Set Rules: <code
@@ -935,7 +939,7 @@
                         this.saveToLocalStorage();
 
                         // Delete from Firebase
-                        if (this.firebaseConfigured) {
+                        if (this.firebaseConfigured && this.userId) {
                             this.deleteFromFirebase(id);
                         }
                     }
@@ -967,6 +971,8 @@
                         this.userId = null;
                         this.db = null;
                         this.auth = null;
+                        this.isAuthenticated = false;
+                        this.userEmail = '';
                         alert('Firebase configuration cleared. Page will reload.');
                         location.reload();
                     }
@@ -986,10 +992,11 @@
                         this.firebaseConfigured = true;
 
                         // Setup auth state listener
-
                         this.auth.onAuthStateChanged(async (user) => {
                             if (user) {
                                 this.userId = user.uid;
+                                this.userEmail = user.email;
+                                this.isAuthenticated = true;
                                 this.firebaseConfigured = true;
 
                                 // Load data from Firebase
@@ -997,10 +1004,9 @@
 
                                 // Setup real-time listener
                                 this.setupFirebaseListener();
-                            }
                             } else {
                                 this.userId = null;
-                                this.userEmail = \'\';
+                                this.userEmail = '';
                                 this.isAuthenticated = false;
                             }
                         });
@@ -1097,7 +1103,7 @@
                     // Save to localStorage
                     this.saveToLocalStorage();
 
-                    // Save to Firebase if configured
+                    // Save to Firebase if configured and authenticated
                     if (this.firebaseConfigured && this.db && this.userId) {
                         for (const itinerary of this.itineraries) {
                             await this.saveToFirebase(itinerary);
@@ -1242,7 +1248,7 @@
 
                     try {
                         this.authError = '';
-                        await this.auth.signInWithEmailAndPassword(this.authEmail, this.authPassword);
+                        const result = await this.auth.signInWithEmailAndPassword(this.authEmail, this.authPassword);
                         this.showAuthModal = false;
                         this.authEmail = '';
                         this.authPassword = '';
@@ -1270,7 +1276,7 @@
 
                     try {
                         this.authError = '';
-                        await this.auth.createUserWithEmailAndPassword(this.authEmail, this.authPassword);
+                        const result = await this.auth.createUserWithEmailAndPassword(this.authEmail, this.authPassword);
                         this.showAuthModal = false;
                         this.authEmail = '';
                         this.authPassword = '';
