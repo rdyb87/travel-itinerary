@@ -12,7 +12,7 @@
     <!-- Alpine.js -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
-    <!-- Firebase v8 compat (required for firebase.auth() syntax) -->
+    <!-- Firebase v8 compat -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
@@ -65,16 +65,6 @@
             box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
 
-        .timeline-item::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            width: 3px;
-            background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
-        }
-
         @keyframes fadeIn {
             from {
                 opacity: 0;
@@ -93,8 +83,6 @@
 
         /* Mobile Optimizations */
         @media (max-width: 640px) {
-
-            /* Header adjustments */
             header .container {
                 padding: 1rem;
             }
@@ -107,37 +95,30 @@
                 font-size: 1.5rem;
             }
 
-            /* Touch-friendly buttons */
             button {
                 min-height: 44px;
                 min-width: 44px;
             }
 
-            /* Modal optimizations */
             .fixed>div {
                 margin: 0.5rem;
                 max-height: 95vh;
             }
 
-            /* Form fields */
             input,
             textarea,
             select {
                 font-size: 16px;
-                /* Prevents zoom on iOS */
             }
 
-            /* Stats cards */
             .stats-grid {
                 gap: 1rem;
             }
 
-            /* Itinerary cards */
             .itinerary-card {
                 padding: 1rem;
             }
 
-            /* Hide text in small buttons, show icons only */
             .btn-icon-only span {
                 display: none;
             }
@@ -684,10 +665,10 @@
                         class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium">
                         Cancel
                     </button>
-                    <button type="submit"
-                        class="gradient-bg text-white px-8 py-2 rounded-lg hover:shadow-lg transition font-medium">
+                    <button type="submit" :disabled="syncStatus === 'syncing'"
+                        class="gradient-bg text-white px-8 py-2 rounded-lg hover:shadow-lg transition font-medium disabled:opacity-50 disabled:cursor-not-allowed">
                         <i class="fas fa-save mr-2"></i>
-                        <span x-text="editMode ? 'Update Trip' : 'Save Trip'"></span>
+                        <span x-text="syncStatus === 'syncing' ? 'Saving...' : (editMode ? 'Update Trip' : 'Save Trip')"></span>
                     </button>
                 </div>
 
@@ -727,7 +708,7 @@
                                 <li>Go to Project Settings → General → Your apps</li>
                                 <li>Click "Web" (&lt;/&gt;) to add a web app</li>
                                 <li>Copy the config values and paste below</li>
-                                <li>In Firestore Database, create a database in production mode</li>
+                                <li><strong>In Firestore Database, click "Create Database".</strong></li>
                                 <li>Set Rules: <code
                                         class="bg-blue-100 px-1">allow read, write: if request.auth != null;</code></li>
                             </ol>
@@ -815,11 +796,11 @@
                 editMode: false,
                 searchQuery: '',
                 filterStatus: 'all',
-                syncStatus: 'synced', // 'synced', 'syncing'
+                syncStatus: 'synced',
 
                 // Authentication
                 isAuthenticated: false,
-                authMode: 'login', // 'login' or 'signup'
+                authMode: 'login',
                 authEmail: '',
                 authPassword: '',
                 authError: '',
@@ -866,7 +847,6 @@
 
                 init() {
                     this.loadFirebaseConfig();
-                    // Set default check-in/out times for initial hotel
                     if (!this.currentItinerary.hotels[0].checkIn) {
                         this.currentItinerary.hotels[0].checkIn = this.getDefaultCheckIn();
                     }
@@ -877,13 +857,13 @@
 
                 getDefaultCheckIn() {
                     const now = new Date();
-                    now.setHours(15, 0, 0, 0); // 3:00 PM
+                    now.setHours(15, 0, 0, 0);
                     return now.toISOString().slice(0, 16);
                 },
 
                 getDefaultCheckOut() {
                     const now = new Date();
-                    now.setHours(12, 0, 0, 0); // 12:00 PM
+                    now.setHours(12, 0, 0, 0);
                     return now.toISOString().slice(0, 16);
                 },
 
@@ -914,8 +894,8 @@
                     };
                 },
 
-                saveItinerary() {
-                    // Update local state for immediate UI feedback
+                async saveItinerary() {
+                    // Optimistic UI update
                     if (this.editMode) {
                         const index = this.itineraries.findIndex(i => i.id === this.currentItinerary.id);
                         this.itineraries[index] = { ...this.currentItinerary };
@@ -924,12 +904,26 @@
                         this.itineraries.push({ ...this.currentItinerary });
                     }
 
-                    // Save to Firebase directly
-                    if (this.firebaseConfigured && this.db && this.userId) {
-                        this.saveToFirebase(this.currentItinerary);
+                    try {
+                        if (this.firebaseConfigured && this.db && this.userId) {
+                            this.syncStatus = 'syncing';
+                            // Wait for Firebase to confirm save
+                            await this.saveToFirebase(this.currentItinerary);
+                            this.syncStatus = 'synced';
+                            this.closeModal();
+                        } else {
+                            throw new Error('Firebase is not configured or user is not logged in.');
+                        }
+                    } catch (error) {
+                        console.error('Save failed:', error);
+                        this.syncStatus = 'synced';
+                        alert(`Error saving to cloud: ${error.message}\n\nPlease ensure you have created a Firestore Database in the Firebase Console and rules are set correctly.`);
+                        
+                        // Revert optimistic UI change if it was a new item
+                        if (!this.editMode) {
+                            this.itineraries.pop();
+                        }
                     }
-
-                    this.closeModal();
                 },
 
                 editItinerary(itinerary) {
@@ -938,19 +932,23 @@
                     this.showAddModal = true;
                 },
 
-                deleteItinerary(id) {
+                async deleteItinerary(id) {
                     if (confirm('Are you sure you want to delete this trip?')) {
-                        // Update local state immediately
+                        // Optimistic removal
                         this.itineraries = this.itineraries.filter(i => i.id !== id);
 
-                        // Delete from Firebase
-                        if (this.firebaseConfigured && this.userId) {
-                            this.deleteFromFirebase(id);
+                        try {
+                            if (this.firebaseConfigured && this.userId) {
+                                await this.deleteFromFirebase(id);
+                            }
+                        } catch (error) {
+                            console.error('Delete failed:', error);
+                            alert(`Error deleting from cloud: ${error.message}`);
+                            // In a real app, you might want to revert the UI here, but for simplicity we keep the optimistic deletion
                         }
                     }
                 },
 
-                // Firebase Methods
                 loadFirebaseConfig() {
                     const savedConfig = localStorage.getItem('firebaseConfig');
                     if (savedConfig) {
@@ -961,74 +959,56 @@
 
                 saveFirebaseConfig() {
                     localStorage.setItem('firebaseConfig', JSON.stringify(this.firebaseConfig));
-                    this.initializeFirebase();
-                    this.showSettingsModal = false;
+                    // Reload page to apply clean initialization
+                    window.location.reload(); 
                 },
 
                 clearFirebaseConfig() {
-                    if (confirm('This will remove Firebase sync. Your local data will remain. Continue?')) {
+                    if (confirm('This will remove Firebase sync.')) {
                         localStorage.removeItem('firebaseConfig');
-                        this.firebaseConfig = {
-                            apiKey: '', authDomain: '', projectId: '',
-                            storageBucket: '', messagingSenderId: '', appId: ''
-                        };
-                        this.firebaseConfigured = false;
-                        this.userId = null;
-                        this.db = null;
-                        this.auth = null;
-                        this.isAuthenticated = false;
-                        this.userEmail = '';
-                        alert('Firebase configuration cleared. Page will reload.');
-                        location.reload();
+                        window.location.reload();
                     }
                 },
 
-                async initializeFirebase() {
+                initializeFirebase() {
                     try {
-                        // Check if already initialized
-                        if (firebase.apps.length > 0) {
-                            await firebase.app().delete();
+                        // FIX: Standard initialization pattern.
+                        // Only initialize if no apps exist. Do NOT delete existing apps on refresh.
+                        if (!firebase.apps.length) {
+                            firebase.initializeApp(this.firebaseConfig);
                         }
 
-                        // Initialize Firebase
-                        firebase.initializeApp(this.firebaseConfig);
                         this.db = firebase.firestore();
                         this.auth = firebase.auth();
                         this.firebaseConfigured = true;
 
-                        // Setup auth state listener
                         this.auth.onAuthStateChanged(async (user) => {
                             if (user) {
                                 this.userId = user.uid;
                                 this.userEmail = user.email;
                                 this.isAuthenticated = true;
-                                this.firebaseConfigured = true;
 
-                                // Load data from Firebase
+                                // Load data
                                 await this.loadFromFirebase();
-
-                                // Setup real-time listener
                                 this.setupFirebaseListener();
                             } else {
                                 this.userId = null;
                                 this.userEmail = '';
                                 this.isAuthenticated = false;
-                                this.itineraries = []; // Clear data on logout
+                                this.itineraries = [];
                             }
                         });
 
                     } catch (error) {
                         console.error('Firebase initialization error:', error);
-                        alert('Failed to connect to Firebase. Please check your configuration.\n\nError: ' + error.message);
+                        alert('Failed to connect to Firebase. Check configuration.\n\nError: ' + error.message);
                         this.firebaseConfigured = false;
                     }
                 },
 
                 async loadFromFirebase() {
                     if (!this.db || !this.userId) return;
-
                     try {
-                        this.syncStatus = 'syncing';
                         const snapshot = await this.db.collection('users')
                             .doc(this.userId)
                             .collection('itineraries')
@@ -1040,10 +1020,13 @@
                         });
 
                         this.itineraries = firebaseData;
-                        this.syncStatus = 'synced';
                     } catch (error) {
                         console.error('Error loading from Firebase:', error);
-                        this.syncStatus = 'synced';
+                        if (error.code === 'permission-denied') {
+                            alert('Permission Denied: Please check your Firestore Database Rules.');
+                        } else if (error.code === 'not-found') {
+                            alert('Database Not Found: Please create a Firestore Database in the Firebase Console.');
+                        }
                     }
                 },
 
@@ -1058,45 +1041,30 @@
                             snapshot.forEach(doc => {
                                 updates.push({ id: doc.id, ...doc.data() });
                             });
-
                             this.itineraries = updates;
+                        }, (error) => {
+                             console.error('Listener error:', error);
                         });
                 },
 
-                async saveToFirebase(itinerary) {
-                    if (!this.db || !this.userId) return;
-
-                    try {
-                        this.syncStatus = 'syncing';
-                        await this.db.collection('users')
-                            .doc(this.userId)
-                            .collection('itineraries')
-                            .doc(String(itinerary.id))
-                            .set(itinerary);
-                        this.syncStatus = 'synced';
-                    } catch (error) {
-                        console.error('Error saving to Firebase:', error);
-                        this.syncStatus = 'synced';
-                        alert('Error saving data: ' + error.message);
-                    }
+                saveToFirebase(itinerary) {
+                    if (!this.db || !this.userId) return Promise.reject(new Error('Firebase not ready'));
+                    
+                    return this.db.collection('users')
+                        .doc(this.userId)
+                        .collection('itineraries')
+                        .doc(String(itinerary.id))
+                        .set(itinerary);
                 },
 
-                async deleteFromFirebase(id) {
-                    if (!this.db || !this.userId) return;
+                deleteFromFirebase(id) {
+                    if (!this.db || !this.userId) return Promise.reject(new Error('Firebase not ready'));
 
-                    try {
-                        this.syncStatus = 'syncing';
-                        await this.db.collection('users')
-                            .doc(this.userId)
-                            .collection('itineraries')
-                            .doc(String(id))
-                            .delete();
-                        this.syncStatus = 'synced';
-                    } catch (error) {
-                        console.error('Error deleting from Firebase:', error);
-                        this.syncStatus = 'synced';
-                        alert('Error deleting data: ' + error.message);
-                    }
+                    return this.db.collection('users')
+                        .doc(this.userId)
+                        .collection('itineraries')
+                        .doc(String(id))
+                        .delete();
                 },
 
                 closeModal() {
@@ -1177,24 +1145,21 @@
                             try {
                                 const imported = JSON.parse(e.target.result);
                                 if (confirm('This will replace your current itineraries and upload them to Firebase. Continue?')) {
-                                    // Update local state
                                     this.itineraries = imported;
                                     
-                                    // Sync to Firebase
                                     if (this.firebaseConfigured && this.db && this.userId) {
-                                        // We upload each item individually to ensure they are saved
-                                        // Note: This is a simple implementation that overwrites based on ID
-                                        imported.forEach(item => {
-                                            this.saveToFirebase(item);
+                                        const savePromises = imported.map(item => this.saveToFirebase(item));
+                                        Promise.all(savePromises).then(() => {
+                                            alert('Import successful!');
+                                        }).catch(err => {
+                                            alert('Import failed for some items: ' + err.message);
                                         });
                                     } else {
-                                        alert('Firebase not connected. Data imported temporarily but not saved to cloud.');
+                                        alert('Imported locally only. Connect to Firebase to sync.');
                                     }
-                                    
-                                    alert('Itineraries imported successfully!');
                                 }
                             } catch (error) {
-                                alert('Error importing file. Please check the file format.');
+                                alert('Error importing file.');
                             }
                         };
                         reader.readAsText(file);
@@ -1203,20 +1168,17 @@
 
                 get filteredItineraries() {
                     let filtered = this.itineraries;
-
                     if (this.searchQuery) {
                         filtered = filtered.filter(i =>
                             i.destination.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
                             i.country.toLowerCase().includes(this.searchQuery.toLowerCase())
                         );
                     }
-
                     if (this.filterStatus === 'upcoming') {
                         filtered = filtered.filter(i => new Date(i.startDate) > new Date());
                     } else if (this.filterStatus === 'completed') {
                         filtered = filtered.filter(i => new Date(i.endDate) < new Date());
                     }
-
                     return filtered.sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
                 },
 
@@ -1228,32 +1190,19 @@
                     return new Set(this.itineraries.map(i => i.country)).size;
                 },
 
-                // Authentication Methods
                 async login() {
                     if (!this.firebaseConfigured || !this.auth) {
                         this.authError = 'Please configure Firebase first';
                         return;
                     }
-
                     try {
                         this.authError = '';
-                        const result = await this.auth.signInWithEmailAndPassword(this.authEmail, this.authPassword);
+                        await this.auth.signInWithEmailAndPassword(this.authEmail, this.authPassword);
                         this.showAuthModal = false;
                         this.authEmail = '';
                         this.authPassword = '';
                     } catch (error) {
-                        console.error('Login error:', error);
-                        switch (error.code) {
-                            case 'auth/user-not-found':
-                            case 'auth/wrong-password':
-                                this.authError = 'Invalid email or password';
-                                break;
-                            case 'auth/invalid-email':
-                                this.authError = 'Invalid email address';
-                                break;
-                            default:
-                                this.authError = error.message;
-                        }
+                        this.handleAuthError(error);
                     }
                 },
 
@@ -1262,38 +1211,41 @@
                         this.authError = 'Please configure Firebase first';
                         return;
                     }
-
                     try {
                         this.authError = '';
-                        const result = await this.auth.createUserWithEmailAndPassword(this.authEmail, this.authPassword);
+                        await this.auth.createUserWithEmailAndPassword(this.authEmail, this.authPassword);
                         this.showAuthModal = false;
                         this.authEmail = '';
                         this.authPassword = '';
                     } catch (error) {
-                        console.error('Signup error:', error);
-                        switch (error.code) {
-                            case 'auth/email-already-in-use':
-                                this.authError = 'Email already in use';
-                                break;
-                            case 'auth/invalid-email':
-                                this.authError = 'Invalid email address';
-                                break;
-                            case 'auth/weak-password':
-                                this.authError = 'Password should be at least 6 characters';
-                                break;
-                            default:
-                                this.authError = error.message;
-                        }
+                        this.handleAuthError(error);
+                    }
+                },
+
+                handleAuthError(error) {
+                    console.error('Auth error:', error);
+                    switch (error.code) {
+                        case 'auth/user-not-found':
+                        case 'auth/wrong-password':
+                            this.authError = 'Invalid email or password';
+                            break;
+                        case 'auth/invalid-email':
+                            this.authError = 'Invalid email address';
+                            break;
+                        case 'auth/email-already-in-use':
+                            this.authError = 'Email already in use';
+                            break;
+                        default:
+                            this.authError = error.message;
                     }
                 },
 
                 async logout() {
-                    if (confirm('Are you sure you want to logout?')) {
+                    if (confirm('Logout?')) {
                         try {
                             await this.auth.signOut();
                         } catch (error) {
                             console.error('Logout error:', error);
-                            alert('Logout failed: ' + error.message);
                         }
                     }
                 },
