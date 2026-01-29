@@ -12,16 +12,10 @@
     <!-- Alpine.js -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
-    <!-- Firebase SDK 
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script> -->
-	
-	<!-- Firebase v8 compat (required for firebase.auth() syntax) -->
-	<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-	<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-	<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-
+    <!-- Firebase v8 compat (required for firebase.auth() syntax) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -872,7 +866,6 @@
 
                 init() {
                     this.loadFirebaseConfig();
-                    this.loadFromLocalStorage();
                     // Set default check-in/out times for initial hotel
                     if (!this.currentItinerary.hotels[0].checkIn) {
                         this.currentItinerary.hotels[0].checkIn = this.getDefaultCheckIn();
@@ -922,6 +915,7 @@
                 },
 
                 saveItinerary() {
+                    // Update local state for immediate UI feedback
                     if (this.editMode) {
                         const index = this.itineraries.findIndex(i => i.id === this.currentItinerary.id);
                         this.itineraries[index] = { ...this.currentItinerary };
@@ -929,7 +923,12 @@
                         this.currentItinerary.id = Date.now();
                         this.itineraries.push({ ...this.currentItinerary });
                     }
-                    this.saveToStorage();
+
+                    // Save to Firebase directly
+                    if (this.firebaseConfigured && this.db && this.userId) {
+                        this.saveToFirebase(this.currentItinerary);
+                    }
+
                     this.closeModal();
                 },
 
@@ -941,8 +940,8 @@
 
                 deleteItinerary(id) {
                     if (confirm('Are you sure you want to delete this trip?')) {
+                        // Update local state immediately
                         this.itineraries = this.itineraries.filter(i => i.id !== id);
-                        this.saveToLocalStorage();
 
                         // Delete from Firebase
                         if (this.firebaseConfigured && this.userId) {
@@ -1014,6 +1013,7 @@
                                 this.userId = null;
                                 this.userEmail = '';
                                 this.isAuthenticated = false;
+                                this.itineraries = []; // Clear data on logout
                             }
                         });
 
@@ -1039,12 +1039,7 @@
                             firebaseData.push({ id: doc.id, ...doc.data() });
                         });
 
-                        if (firebaseData.length > 0) {
-                            this.itineraries = firebaseData;
-                            // Also save to localStorage as backup
-                            localStorage.setItem('travelItineraries', JSON.stringify(this.itineraries));
-                        }
-
+                        this.itineraries = firebaseData;
                         this.syncStatus = 'synced';
                     } catch (error) {
                         console.error('Error loading from Firebase:', error);
@@ -1064,10 +1059,7 @@
                                 updates.push({ id: doc.id, ...doc.data() });
                             });
 
-                            if (updates.length > 0) {
-                                this.itineraries = updates;
-                                localStorage.setItem('travelItineraries', JSON.stringify(this.itineraries));
-                            }
+                            this.itineraries = updates;
                         });
                 },
 
@@ -1085,6 +1077,7 @@
                     } catch (error) {
                         console.error('Error saving to Firebase:', error);
                         this.syncStatus = 'synced';
+                        alert('Error saving data: ' + error.message);
                     }
                 },
 
@@ -1102,18 +1095,7 @@
                     } catch (error) {
                         console.error('Error deleting from Firebase:', error);
                         this.syncStatus = 'synced';
-                    }
-                },
-
-                async saveToStorage() {
-                    // Save to localStorage
-                    this.saveToLocalStorage();
-
-                    // Save to Firebase if configured and authenticated
-                    if (this.firebaseConfigured && this.db && this.userId) {
-                        for (const itinerary of this.itineraries) {
-                            await this.saveToFirebase(itinerary);
-                        }
+                        alert('Error deleting data: ' + error.message);
                     }
                 },
 
@@ -1172,17 +1154,6 @@
                     });
                 },
 
-                saveToLocalStorage() {
-                    localStorage.setItem('travelItineraries', JSON.stringify(this.itineraries));
-                },
-
-                loadFromLocalStorage() {
-                    const data = localStorage.getItem('travelItineraries');
-                    if (data) {
-                        this.itineraries = JSON.parse(data);
-                    }
-                },
-
                 exportData() {
                     const dataStr = JSON.stringify(this.itineraries, null, 2);
                     const dataBlob = new Blob([dataStr], { type: 'application/json' });
@@ -1205,9 +1176,21 @@
                         reader.onload = (e) => {
                             try {
                                 const imported = JSON.parse(e.target.result);
-                                if (confirm('This will replace your current itineraries. Continue?')) {
+                                if (confirm('This will replace your current itineraries and upload them to Firebase. Continue?')) {
+                                    // Update local state
                                     this.itineraries = imported;
-                                    this.saveToLocalStorage();
+                                    
+                                    // Sync to Firebase
+                                    if (this.firebaseConfigured && this.db && this.userId) {
+                                        // We upload each item individually to ensure they are saved
+                                        // Note: This is a simple implementation that overwrites based on ID
+                                        imported.forEach(item => {
+                                            this.saveToFirebase(item);
+                                        });
+                                    } else {
+                                        alert('Firebase not connected. Data imported temporarily but not saved to cloud.');
+                                    }
+                                    
                                     alert('Itineraries imported successfully!');
                                 }
                             } catch (error) {
